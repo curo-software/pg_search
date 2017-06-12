@@ -91,21 +91,6 @@ module PgSearch
       end
     end
 
-    private
-
-    delegate :connection, :quoted_table_name, :to => :model
-
-    def subquery
-      model
-        .unscoped
-        .select("#{primary_key} AS pg_search_id")
-        .select("#{rank} AS rank")
-        .joins(subquery_join)
-        .where(conditions)
-        .limit(nil)
-        .offset(nil)
-    end
-
     def conditions
       conditions = config.features.reject do |_feature_name, feature_options|
         feature_options && feature_options[:sort_only]
@@ -119,7 +104,22 @@ module PgSearch
         Arel::Nodes::Or.new(accumulator, expression)
       end
 
-      conditions.to_sql
+      conditions
+    end
+
+    private
+
+    delegate :connection, :quoted_table_name, :to => :model
+
+    def subquery
+      model
+        .unscoped
+        .select("#{primary_key} AS pg_search_id")
+        .select("#{rank} AS rank")
+        .joins(subquery_join)
+        .where(conditions.to_sql)
+        .limit(nil)
+        .offset(nil)
     end
 
     def order_within_rank
